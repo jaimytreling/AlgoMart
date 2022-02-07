@@ -1,20 +1,30 @@
-import { CreateAuctionBody } from '@algomart/schemas'
+import {
+  AlgorandTransactionStatus,
+  CollectibleAuctionStatus,
+  CreateAuctionBody,
+} from '@algomart/schemas'
 import algosdk from 'algosdk'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { Transaction } from 'objection'
 
 import AlgorandAdapter from '@/lib/algorand-adapter'
+import DirectusAdapter from '@/lib/directus-adapter'
+import { AlgorandTransactionModel } from '@/models/algorand-transaction.model'
 import { CollectibleModel } from '@/models/collectible.model'
+import { CollectibleAuctionModel } from '@/models/collectible-auction.model'
 import { UserAccountModel } from '@/models/user-account.model'
 import { decrypt } from '@/utils/encryption'
-import { userInvariant } from '@/utils/invariant'
+import { invariant, userInvariant } from '@/utils/invariant'
 import { logger } from '@/utils/logger'
 
 export default class AuctionsService {
   logger = logger.child({ context: this.constructor.name })
 
-  constructor(private readonly algorand: AlgorandAdapter) {}
+  constructor(
+    private readonly algorand: AlgorandAdapter,
+    private readonly cms: DirectusAdapter
+  ) {}
 
   async createAuction(request: CreateAuctionBody, trx?: Transaction) {
     const user = await UserAccountModel.query(trx)
@@ -30,9 +40,10 @@ export default class AuctionsService {
     )
     userInvariant(mnemonic, 'Invalid passphrase', 400)
 
+    const { collectibleId, reservePrice, startAt, endAt } = request
     const collectible = await CollectibleModel.query(trx)
       .where({
-        id: request.collectibleId,
+        id: collectibleId,
         ownerId: user.id,
       })
       .first()
@@ -77,26 +88,59 @@ export default class AuctionsService {
       400
     )
 
-    const txn = await this.algorand.createApplicationTransaction({
-      appArgs: [
-        algosdk.decodeAddress(user.algorandAccount?.address).publicKey,
-        algosdk.encodeUint64(collectible.address),
-        algosdk.encodeUint64(
-          Math.floor(new Date(request.startAt).getTime() / 1000)
-        ),
-        algosdk.encodeUint64(
-          Math.floor(new Date(request.endAt).getTime() / 1000)
-        ),
-        algosdk.encodeUint64(request.reservePrice),
-      ],
-      approvalProgram: approvalProgramBytes,
-      clearProgram: clearStateProgramBytes,
-      numGlobalByteSlices: numberGlobalByteSlices,
-      numGlobalInts: numberGlobalInts,
+    const { transactionId, signedTransaction } =
+      await this.algorand.createApplicationTransaction({
+        appArgs: [
+          algosdk.decodeAddress(user.algorandAccount?.address).publicKey,
+          algosdk.encodeUint64(collectible.address),
+          algosdk.encodeUint64(Math.floor(new Date(startAt).getTime() / 1000)),
+          algosdk.encodeUint64(Math.floor(new Date(endAt).getTime() / 1000)),
+          algosdk.encodeUint64(reservePrice),
+          algosdk.encodeUint64(100_000), // TODO: remove hard code
+        ],
+        approvalProgram: approvalProgramBytes,
+        clearProgram: clearStateProgramBytes,
+        numGlobalByteSlices: numberGlobalByteSlices,
+        numGlobalInts: numberGlobalInts,
+      })
+    this.logger.info({ signedTransaction }, 'transaction')
+    await this.algorand.submitTransaction(signedTransaction)
+    // TODO:
+    //   1. Add 100,000 microAlgos to the application's account to satisfy increased minimum balance requirement for additional asset holding
+    //   2. Opt the application's account into holding asset to be auctioned
+    //   3. Transfer the asset to the application's account
+
+    const transaction = await AlgorandTransactionModel.query(trx).insert({
+      address: transactionId,
+      status: AlgorandTransactionStatus.Pending,
     })
 
-    this.logger.info({ txn }, 'transaction')
+    await CollectibleAuctionModel.query(trx).insert({
+      collectibleId,
+      reservePrice,
+      startAt,
+      endAt,
+      appId: 999, /// TODO:
+      status: CollectibleAuctionStatus.New,
+      transactionId: transaction.id,
+      userAccountId: user.id,
+    })
+  }
 
-    // TODO: submit transaction and then fund the app (escrow account) somehow?
+  async getCollectibleAuctionById(collectibleAuctionId: string) {
+    const collectibleAuction = await CollectibleAuctionModel.query()
+      .findById(collectibleAuctionId)
+      .withGraphJoined('[collectible.owner, bids.userAccount, userAccount]')
+    userInvariant(collectibleAuction, 'CollectibleAuction not found', 404)
+
+    const {
+      collectibles: [collectibleTemplate],
+    } = await this.cms.findAllCollectibles(
+      undefined,
+      { id: collectibleAuction.collectible.templateId },
+      1
+    )
+    invariant(collectibleTemplate, 'collectibleTemplate not found')
+    return { collectibleAuction, collectibleTemplate }
   }
 }

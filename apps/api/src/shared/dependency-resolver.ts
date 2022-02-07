@@ -207,7 +207,11 @@ export function configureResolver() {
   )
   resolver.set(
     AuctionsService.name,
-    (c) => new AuctionsService(c.get<AlgorandAdapter>(AlgorandAdapter.name))
+    (c) =>
+      new AuctionsService(
+        c.get<AlgorandAdapter>(AlgorandAdapter.name),
+        c.get<DirectusAdapter>(DirectusAdapter.name)
+      )
   )
   return resolver
 }

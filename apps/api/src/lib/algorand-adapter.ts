@@ -530,7 +530,9 @@ export default class AlgorandAdapter {
       rekeyTo: options.rekeyTo,
     })
 
-    return txn
+    const transactionId = txn.txID()
+    const signedTransaction = txn.signTxn(this.fundingAccount.sk) //TODO: handle signing with `options.from`
+    return { transactionId, signedTransaction }
   }
 
   appMinBalance(options: {
