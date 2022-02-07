@@ -1,8 +1,12 @@
-import { CreateAuctionBodySchema } from '@algomart/schemas'
+import {
+  CollectibleAuctionIdSchema,
+  CollectibleAuctionWithDetailSchema,
+  CreateAuctionBodySchema,
+} from '@algomart/schemas'
 import { FastifyInstance } from 'fastify'
 import fastifyBearerAuth from 'fastify-bearer-auth'
 
-import { createAuction } from './auctions.routes'
+import { createAuction, getCollectibleAuctionById } from './auctions.routes'
 
 import bearerAuthOptions from '@/configuration/bearer-auth'
 import { appErrorHandler } from '@/utils/errors'
@@ -22,16 +26,32 @@ export async function auctionsRoutes(app: FastifyInstance) {
   // Plugins
   await app.register(fastifyBearerAuth, bearerAuthOptions)
 
-  app.post(
-    '/',
-    {
-      transact: true,
-      schema: {
-        tags,
-        security,
-        body: CreateAuctionBodySchema,
+  app
+    .post(
+      '/',
+      {
+        transact: true,
+        schema: {
+          tags,
+          security,
+          body: CreateAuctionBodySchema,
+        },
       },
-    },
-    createAuction
-  )
+      createAuction
+    )
+
+    .get(
+      '/:collectibleAuctionId',
+      {
+        schema: {
+          tags,
+          security,
+          params: CollectibleAuctionIdSchema,
+          response: {
+            200: CollectibleAuctionWithDetailSchema,
+          },
+        },
+      },
+      getCollectibleAuctionById
+    )
 }

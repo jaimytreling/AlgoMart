@@ -15,3 +15,11 @@ export const CreateAuctionBodySchema = Type.Intersect([
 ])
 
 export type CreateAuctionBody = Simplify<Static<typeof CreateAuctionBodySchema>>
+
+export const CollectibleAuctionIdSchema = Type.Object({
+  collectibleAuctionId: Type.String(),
+})
+
+export type CollectibleAuctionId = Simplify<
+  Static<typeof CollectibleAuctionIdSchema>
+>

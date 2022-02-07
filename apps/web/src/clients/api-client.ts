@@ -3,6 +3,7 @@ import {
   ClaimFreePack,
   ClaimPack,
   ClaimRedeemPack,
+  CollectibleAuctionWithDetails,
   CollectibleId,
   CollectibleListQuerystring,
   CollectibleListShowcase,
@@ -462,6 +463,15 @@ export class ApiClient {
         },
       })
       .json<Homepage>()
+  }
+  //#endregion
+
+  //#region CollectibleAuction
+  async getCollectibleAuction(collectibleAuctionId: string) {
+    // TODO: Call API
+    return await this.http
+      .get(`auctions/${collectibleAuctionId}`)
+      .json<CollectibleAuctionWithDetails>()
   }
   //#endregion
 }

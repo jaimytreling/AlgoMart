@@ -1,0 +1,12 @@
+.root {
+  /* Tablet + */
+  @apply bg-base-bgCard;
+}
+
+.header {
+  @apply border-b border-base-border;
+}
+
+.title {
+  @apply p-6 text-2xl font-bold text-center;
+}

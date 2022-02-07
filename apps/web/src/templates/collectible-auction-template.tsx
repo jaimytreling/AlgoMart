@@ -1,26 +1,20 @@
 import {
-  PackAuction,
-  PackStatus,
-  PackType,
-  PublishedPack,
+  CollectibleAuctionStatus,
+  CollectibleAuctionWithDetails,
 } from '@algomart/schemas'
-import { useRouter } from 'next/router'
 import useTranslation from 'next-translate/useTranslation'
-import { useState } from 'react'
 
 import css from './release-template.module.css'
 
 import Alert from '@/components/alert/alert'
 import AlertMessage from '@/components/alert-message/alert-message'
+import CollectibleAuctionDetails from '@/components/collectible-auction-details/collectible-auction-details'
 import MediaGallery from '@/components/media-gallery/media-gallery'
-import ClaimNFTModal from '@/components/modals/claim-nft-modal'
-import ReleaseDetails from '@/components/release-details/release-details'
 import { useAuth } from '@/contexts/auth-context'
 import { getNotificationDetails } from '@/utils/auction'
 import { isAfterNow } from '@/utils/date-time'
-import { urls } from '@/utils/urls'
 
-export interface ReleaseTemplateProps {
+export interface CollectibleAuctionProps {
   avatars: { [key: string]: string | null }
   disallowBuyOrClaim: boolean | null
   handleClaimNFT: (redeemCode: string) => Promise<{ packId: string } | string>
@@ -28,82 +22,57 @@ export interface ReleaseTemplateProps {
   isOutbid: boolean | null
   isOwner: boolean | null
   isWinningBidder: boolean | null
-  packAuction: PackAuction | null
-  packTemplate: PublishedPack
+  collectibleAuctionWithDetails: CollectibleAuctionWithDetails
 }
 
-export default function ReleaseTemplate({
+export default function CollectibleAuction({
   avatars,
   disallowBuyOrClaim,
-  handleClaimNFT,
   isHighestBidder,
   isOutbid,
   isOwner,
   isWinningBidder,
-  packAuction,
-  packTemplate,
-}: ReleaseTemplateProps) {
+  collectibleAuctionWithDetails,
+}: CollectibleAuctionProps) {
   const { user } = useAuth()
-  const { push } = useRouter()
   const { t } = useTranslation()
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
-  const startDateTime = packTemplate.releasedAt
-  const endDateTime = packTemplate.auctionUntil
-  const packType = packTemplate.type
+  const { collectibleAuction, collectibleTemplate } =
+    collectibleAuctionWithDetails
+
+  const startDateTime = collectibleAuction.startAt
+  const endDateTime = collectibleAuction.endAt
 
   const isEnded = endDateTime && !isAfterNow(new Date(endDateTime))
+  const isActiveStatus =
+    collectibleAuction.status === CollectibleAuctionStatus.Active
   const isActive =
-    packTemplate.status === PackStatus.Active &&
+    isActiveStatus &&
     startDateTime &&
     !isAfterNow(new Date(startDateTime)) &&
     !isEnded
   const isInFuture = startDateTime && isAfterNow(new Date(startDateTime))
-  const isAlertDisplayed =
-    user &&
-    ((packType === PackType.Purchase && isActive) ||
-      (packType === PackType.Auction && !isOwner))
+  const isAlertDisplayed = user && !isOwner
 
   const handleClaimNFTFlow = () => {
-    packType === PackType.Purchase || packType === PackType.Auction
-      ? push(`${urls.checkout}/${packTemplate.slug}`)
-      : setIsModalOpen(!isModalOpen)
+    console.log(`handleClaimNFTFlow for ${collectibleAuction.id}`)
+    throw new Error('handleClaimNFTFlow is not implemented') // TODO: Implement
   }
 
   const getAlertText = () => {
-    if (
-      packType === PackType.Purchase &&
-      !disallowBuyOrClaim &&
-      Boolean(packTemplate.available)
-    ) {
-      return `${t('release:This release is open')}! ${t(
-        'release:N of N editions remaining',
-        {
-          available: packTemplate.available,
-          total: packTemplate.total,
-        }
-      )}`
+    if (isWinningBidder && isEnded) {
+      return `🏆 ${t('release:You won the auction')}! ${t(
+        'release:Claim your NFT now'
+      )}:`
+    } else if (isEnded) {
+      return `🎬 ${t('release:This auction has ended')}.`
     }
-    if (packType === PackType.Auction) {
-      if (isWinningBidder && isEnded) {
-        return `🏆 ${t('release:You won the auction')}! ${t(
-          'release:Claim your NFT now'
-        )}:`
-      } else if (isEnded) {
-        return `🎬 ${t('release:This auction has ended')}.`
-      }
-      if (
-        packTemplate.status === PackStatus.Active &&
-        isActive &&
-        endDateTime
-      ) {
-        return `🚨 ${t('release:This auction is live')}:`
-      }
-      if (isInFuture && !isEnded) {
-        return `⏰ ${t('release:Auction begins in')}`
-      }
+    if (isActiveStatus && isActive && endDateTime) {
+      return `🚨 ${t('release:This auction is live')}:`
     }
-    return null
+    if (isInFuture && !isEnded) {
+      return `⏰ ${t('release:Auction begins in')}`
+    }
   }
 
   const alertText = getAlertText()
@@ -127,15 +96,13 @@ export default function ReleaseTemplate({
         {isAlertDisplayed && alertText && (
           <Alert
             callToAction={
-              packType === PackType.Auction && isActive
+              isActive
                 ? t('common:actions.Place Bid')
-                : packType === PackType.Auction && isWinningBidder
+                : isWinningBidder
                 ? t('common:actions.Claim NFT')
-                : packType === PackType.Purchase && isActive
-                ? t('common:actions.Purchase')
                 : null
             }
-            centerContent={packType === PackType.Purchase}
+            centerContent={false}
             className={isWinningBidder ? css.alert : undefined}
             content={alertText}
             counterEndTime={
@@ -151,29 +118,21 @@ export default function ReleaseTemplate({
         )}
 
         {/* Media Gallery */}
-        <MediaGallery media={[packTemplate.image]} />
+        <MediaGallery media={[collectibleTemplate.image]} />
 
         {/* Release Details */}
         <section>
-          <ReleaseDetails
+          <CollectibleAuctionDetails
             avatars={avatars}
             disallowBuyOrClaim={disallowBuyOrClaim}
             isOwner={isOwner}
             isWinningBidder={isWinningBidder}
             onCheckout={handleClaimNFTFlow}
-            packAuction={packAuction}
-            packTemplate={packTemplate}
+            collectibleAuctionWithDetails={collectibleAuctionWithDetails}
           />
         </section>
       </div>
-
-      {/* Modal */}
-      <ClaimNFTModal
-        onClose={handleClaimNFTFlow}
-        open={isModalOpen}
-        onSubmit={handleClaimNFT}
-        packTemplate={packTemplate}
-      />
+      {/*TODO: Claim NFT Modal*/}
     </article>
   )
 }

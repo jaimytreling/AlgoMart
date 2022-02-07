@@ -1,5 +1,6 @@
 import { Static, Type } from '@sinclair/typebox'
 
+import { UserAccountSchema } from './accounts'
 import { CollectionWithSetsSchema, SetBaseSchema } from './collections'
 import {
   BaseSchema,
@@ -110,6 +111,27 @@ export const CollectibleWithDetailsSchema = Type.Intersect([
   }),
 ])
 
+export const CollectibleAuctionBidWithDetailSchema = Type.Intersect([
+  CollectibleAuctionBidSchema,
+  Type.Object({ userAccount: UserAccountSchema }),
+])
+
+export const CollectibleAuctionWithDetailSchema = Type.Object({
+  collectibleTemplate: CollectibleBaseSchema,
+  activeBid: Type.Optional(CollectibleAuctionBidWithDetailSchema),
+  collectibleAuction: Type.Intersect([
+    CollectibleAuctionSchema,
+    Type.Object({
+      collectible: Type.Intersect([
+        CollectibleSchema,
+        Type.Object({ owner: UserAccountSchema }),
+      ]),
+      bids: Type.Array(CollectibleAuctionBidWithDetailSchema),
+      userAccount: UserAccountSchema,
+    }),
+  ]),
+})
+
 export const CollectibleOwnershipSchema = Type.Intersect([
   BaseSchema,
   Type.Object({
@@ -207,6 +229,14 @@ export type CollectibleAuction = Simplify<
 >
 export type CollectibleAuctionBid = Simplify<
   Static<typeof CollectibleAuctionBidSchema>
+>
+
+export type CollectibleAuctionWithDetails = Simplify<
+  Static<typeof CollectibleAuctionWithDetailSchema>
+>
+
+export type CollectibleAuctionBidWithDetail = Simplify<
+  Static<typeof CollectibleAuctionBidWithDetailSchema>
 >
 export type CollectibleOwnership = Simplify<
   Static<typeof CollectibleOwnershipSchema>
