@@ -85,25 +85,25 @@ You can either build and run each application manually or you can use `docker-co
 npm start
 ```
 
-To build _everything_:
+#### To build _everything_:
 
 ```bash
 npm run build
 ```
 
-To run all tests:
+#### To run all tests:
 
 ```
 npm test
 ```
 
-To run eslint for all projects:
+#### To run eslint for all projects:
 
 ```
 npm run lint
 ```
 
-To initialize the databases:
+#### To initialize the databases:
 
 ```bash
 nx drop api &&\
