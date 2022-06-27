@@ -1,6 +1,6 @@
-<p align="center"><img alt="AlgoMarkt Logo" src="./AlgoMarkt-Logo.png" width="400" height="140"></p>
+<p align="center"><img alt="AlgoMart Logo" src="./AlgoMart-Logo.png" width="400" height="140"></p>
 
-# AlgoMarkt
+# AlgoMart
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)][code of conduct]
 
@@ -181,7 +181,7 @@ If you wanted to create a new library at the path `libs/shared/utils`, you'd use
 
 ```bash
 # example: add typescript as a dev dependency to the web package
-npm install --workspace @AlgoMarkt/web typescript --save-exact
+npm install --workspace @AlgoMart/web typescript --save-exact
 
 # do a clean install of all dependencies
 npm run clean && npm install
@@ -198,7 +198,7 @@ npm run test:api -- --watch
 [directus]: https://directus.io
 [firebase]: https://firebase.google.com/
 [gcp]: https://cloud.google.com
-[issue tracker]: https://github.com/deptagency/AlgoMarkt/issues
+[issue tracker]: https://github.com/deptagency/AlgoMart/issues
 [nvm]: https://github.com/nvm-sh/nvm
 [postgres app]: https://postgresapp.com
 [schemas]: libs/schemas
